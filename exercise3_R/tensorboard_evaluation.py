@@ -1,43 +1,30 @@
-import tensorflow as tf
 import os
 from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
+
 
 class Evaluation:
 
-    def __init__(self, store_dir, name, stats = []):
+    def __init__(self, store_dir, name, stats=[]):
         """
         Creates placeholders for the statistics listed in stats to generate tensorboard summaries.
         e.g. stats = ["loss"]
         """
-        tf.reset_default_graph()
-        self.sess = tf.Session()
-        self.tf_writer = tf.summary.FileWriter(os.path.join(store_dir, "%s-%s" % (name, datetime.now().strftime("%Y%m%d-%H%M%S")) ))
-
+        self.folder_id = "%s-%s" % (name, datetime.now().strftime("%Y%m%d-%H%M%S"))
+        self.summary_writer = SummaryWriter(os.path.join(store_dir, self.folder_id))
         self.stats = stats
-        self.pl_stats = {}
-        
-        for s in self.stats:
-            self.pl_stats[s] = tf.placeholder(tf.float32, name=s)
-            tf.summary.scalar(s, self.pl_stats[s])
-            
-        self.performance_summaries = tf.summary.merge_all()
 
     def write_episode_data(self, episode, eval_dict):
-       """
-        Write episode statistics in eval_dict to tensorboard, make sure that the entries in eval_dict are specified in stats.
-        e.g. eval_dict = {"loss" : 1e-4}
-       """
-       my_dict = {}
-       for k in eval_dict:
-          assert(k in self.stats)
-          my_dict[self.pl_stats[k]] = eval_dict[k]
+        """
+         Write episode statistics in eval_dict to tensorboard, make sure that the entries in eval_dict are specified in stats.
+         e.g. eval_dict = {"loss" : 1e-4}
+        """
 
-       summary = self.sess.run(self.performance_summaries, feed_dict=my_dict)
+        for k in eval_dict:
+            assert (k in self.stats)
+            self.summary_writer.add_scalar(k, eval_dict[k], global_step=episode)
 
-       self.tf_writer.add_summary(summary, episode)
-       self.tf_writer.flush()
+        self.summary_writer.flush()
 
     def close_session(self):
-        self.tf_writer.close()
-        self.sess.close()
-
+        self.summary_writer.close()
