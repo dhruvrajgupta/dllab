@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 import gzip
 import json
+import time
 
 
 def key_press(k, mod):
@@ -84,6 +85,8 @@ if __name__ == "__main__":
         episode_reward = 0
         state = env.reset()
         while True:
+
+            # time.sleep(0.1)
 
             next_state, r, done, info = env.step(a)
             episode_reward += r
