@@ -12,6 +12,7 @@ import json
 from agent.bc_agent import BCAgent
 from utils import *
 
+import torch
 
 def run_episode(env, agent, rendering=True, max_timesteps=1000):
     
@@ -26,7 +27,10 @@ def run_episode(env, agent, rendering=True, max_timesteps=1000):
     while True:
         
         # TODO: preprocess the state in the same way than in your preprocessing in train_agent.py
-        #    state = ...
+        state = np.array(state).astype('float32')
+        state = rgb2gray(state)
+        state = state.reshape(1, 1, state.shape[-1], state.shape[-1])
+        state = torch.from_numpy(state)
 
         
         # TODO: get the action from your agent! You need to transform the discretized actions to continuous
@@ -35,7 +39,9 @@ def run_episode(env, agent, rendering=True, max_timesteps=1000):
         #       - the action array fed into env.step() needs to have a shape like np.array([0.0, 0.0, 0.0])
         #       - just in case your agent misses the first turn because it is too fast: you are allowed to clip the acceleration in test_agent.py
         #       - you can use the softmax output to calculate the amount of lateral acceleration
-        # a = ...
+        a = agent.predict(state)
+        a = a.argmax(1)
+        a = id_to_action(a)
 
         next_state, r, done, info = env.step(a)   
         episode_reward += r       
@@ -59,8 +65,8 @@ if __name__ == "__main__":
     n_test_episodes = 15                  # number of episodes to test
 
     # TODO: load agent
-    # agent = BCAgent(...)
-    # agent.load("models/bc_agent.pt")
+    agent = BCAgent(learning_rate=1e-4)
+    agent.load("models/agent.pt")
 
     env = gym.make('CarRacing-v0').unwrapped
 

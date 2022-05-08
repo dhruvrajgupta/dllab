@@ -12,7 +12,7 @@ class BCAgent:
 
     def update(self, X_batch, y_batch):
     #     # TODO: transform input to tensors
-        # print(X_batch.shape)
+        # print(X_batch.shape)    # torch.Size([64, 1, 96, 96])
     #     # TODO: forward + backward + optimize
         loss = 0
         self.optimizer.zero_grad()

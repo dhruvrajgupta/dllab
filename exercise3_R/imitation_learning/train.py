@@ -212,6 +212,7 @@ def train_model(X_train, y_train, X_valid, y_valid, number_of_epochs, batch_size
     plt.xlabel("Epoch #")
     plt.ylabel("Loss/Accuracy")
     plt.legend(loc="lower left")
+    plt.show()
 
 
 class MyDataset(Dataset):
@@ -237,5 +238,5 @@ if __name__ == "__main__":
     X_train, y_train, X_valid, y_valid = preprocessing(X_train, y_train, X_valid, y_valid, history_length=1)
 
     # train model (you can change the parameters!)
-    train_model(X_train, y_train, X_valid, y_valid, number_of_epochs=25, batch_size=64, lr=1e-4)
+    train_model(X_train, y_train, X_valid, y_valid, number_of_epochs=1, batch_size=64, lr=1e-4)
  
