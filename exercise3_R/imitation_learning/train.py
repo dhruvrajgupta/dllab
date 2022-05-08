@@ -67,6 +67,8 @@ def preprocessing(X_train, y_train, X_valid, y_valid, history_length=1):
     # print(y_valid.shape)            # (3000, 3)
     
     X_train = rgb2gray(X_train)
+    # TODO: crop the bottom part so that its excluded from training
+    # X_train[:, 83:, :] = 255
     y_train = np.array(list(map(action_to_id, y_train)))
     X_valid = rgb2gray(X_valid)
     y_valid = np.array(list(map(action_to_id, y_valid)))
@@ -93,8 +95,10 @@ def train_model(X_train, y_train, X_valid, y_valid, number_of_epochs, batch_size
         tensorboard_dir, 
         name='example', 
         stats=[ 
-        "total_train_loss", 
-        "total_val_loss"
+        "train_loss", 
+        "val_loss",
+        "train_accuracy",
+        "val_accuracy"
         ]
         )
 
@@ -136,10 +140,17 @@ def train_model(X_train, y_train, X_valid, y_valid, number_of_epochs, batch_size
         total_train_loss = 0
         total_val_loss = 0
 
+        train_correct = 0
+        val_correct = 0
+
         for i, (train_features, train_labels) in enumerate(train_data_loader):
             
             batch_train_loss = agent.update(train_features, train_labels)
             total_train_loss += batch_train_loss
+
+            #### Ask about this part (!!!!!!!!!!!!!!)
+            train_correct += (agent.predict(train_features).argmax(1)==train_labels).type(torch.float).sum().item()
+            # print(train_correct)
 
             # if i % 10 == 0:
             #     # compute training/ validation accuracy and write it to tensorboard
@@ -156,7 +167,10 @@ def train_model(X_train, y_train, X_valid, y_valid, number_of_epochs, batch_size
 
             for val_features, val_labels in val_data_loader:
                 val_output = agent.predict(val_features)
-                total_val_loss += agent.loss(val_output, val_labels).item()
+                total_val_loss += agent.loss(val_output, val_labels)
+
+                val_correct += (val_output.argmax(1) == val_labels).type(torch.float).sum().item()
+                # print(val_correct)
                 
                 # print(total_val_loss)
             
@@ -166,27 +180,38 @@ def train_model(X_train, y_train, X_valid, y_valid, number_of_epochs, batch_size
         avg_train_loss = total_train_loss / train_steps
         avg_val_loss = total_val_loss / val_steps
 
-        tensorboard_eval.write_episode_data(epoch, {"total_train_loss": total_train_loss})
-        tensorboard_eval.write_episode_data(epoch, {"total_val_loss": total_val_loss})
+        # calculate the training and validation accuracy
+        train_correct = train_correct / len(train_data_loader.dataset)
+        val_correct = val_correct / len(val_data_loader.dataset)
+
+        tensorboard_eval.write_episode_data(epoch, {"train_loss": avg_train_loss})
+        tensorboard_eval.write_episode_data(epoch, {"val_loss": avg_val_loss})
+        tensorboard_eval.write_episode_data(epoch, {"train_accuracy": train_correct})
+        tensorboard_eval.write_episode_data(epoch, {"val_accuracy": val_correct})
 
         # update our training history
         H["train_loss"].append(avg_train_loss)
         H["val_loss"].append(avg_val_loss)
+        H["train_acc"].append(train_correct)
+        H["val_acc"].append(val_correct)
         
         # TODO: save your agent
         # print(os.path.join(model_dir, "agent.pt"))
         # agent.save(os.path.join(model_dir, "agent.pt"))
-        print('Epoch : ',epoch+1, '\t', 'train_loss :', avg_train_loss, '\t', 'val_loss : ', avg_val_loss)
+        print('Epoch : ',epoch+1, '\t', 'train_loss :', avg_train_loss, '\t', 'val_loss : ', 
+            avg_val_loss, '\t', 'train_acc : ', train_correct, '\t', 'val_acc : ', val_correct)
 
     # plot the training loss and accuracy
     plt.style.use("ggplot")
     plt.figure()
     plt.plot(H["train_loss"], label="train_loss")
     plt.plot(H["val_loss"], label="val_loss")
+    plt.plot(H["train_acc"], label="train_acc")
+    plt.plot(H["val_acc"], label="val_acc")
+    plt.title("Training Loss and Accuracy on Dataset")
     plt.xlabel("Epoch #")
-    plt.ylabel("Loss")
+    plt.ylabel("Loss/Accuracy")
     plt.legend(loc="lower left")
-    plt.show()
 
 
 class MyDataset(Dataset):
@@ -212,5 +237,5 @@ if __name__ == "__main__":
     X_train, y_train, X_valid, y_valid = preprocessing(X_train, y_train, X_valid, y_valid, history_length=1)
 
     # train model (you can change the parameters!)
-    train_model(X_train, y_train, X_valid, y_valid, number_of_epochs=2, batch_size=64, lr=1e-4)
+    train_model(X_train, y_train, X_valid, y_valid, number_of_epochs=25, batch_size=64, lr=1e-4)
  
